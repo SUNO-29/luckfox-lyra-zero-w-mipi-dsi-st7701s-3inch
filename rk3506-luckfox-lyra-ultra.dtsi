@@ -1,0 +1,392 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
+ */
+
+// 3寸mipi屏幕
+// 该版本基于 幸狐官方dtsi深度定制，专为 480x854 分辨率 MIPI 屏幕优化。
+// 与原始通用版本（rk3506-luckfox-lyra-ultra.dtsi）的主要差异如下：
+// 1. 启用了 PWM 背光，并调整了 PWM 频率参数。
+// 2. 为3寸mipi屏幕添加了完整的初始化序列、复位GPIO控制、专用时序参数。
+// 3. 配置了 FT3269 触摸屏驱动。
+// 4. 移除了通用版本中大量未使用的屏幕时序定义，使文件更简洁。
+
+/dts-v1/;
+
+#include <dt-bindings/pinctrl/rockchip.h>
+#include <dt-bindings/display/drm_mipi_dsi.h>
+#include <dt-bindings/display/rockchip_vop.h>
+#include <dt-bindings/input/rk-input.h>
+#include <dt-bindings/sensor-dev.h>
+#include <dt-bindings/suspend/rockchip-rk3506.h>
+#include "rk3506.dtsi"
+
+/ {
+	backlight: backlight {
+		compatible = "pwm-backlight";
+		/* 差异点：PWM 周期从 25000ns 改为 1000000ns，40khz改为1khz，具体可查看背光驱动芯片 */
+		pwms = <&pwm0_4ch_2 0 1000000 0>;
+		brightness-levels = <
+			  0  20  20  21  21  22  22  23
+			 23  24  24  25  25  26  26  27
+			 27  28  28  29  29  30  30  31
+			 31  32  32  33  33  34  34  35
+			 35  36  36  37  37  38  38  39
+			 40  41  42  43  44  45  46  47
+			 48  49  50  51  52  53  54  55
+			 56  57  58  59  60  61  62  63
+			 64  65  66  67  68  69  70  71
+			 72  73  74  75  76  77  78  79
+			 80  81  82  83  84  85  86  87
+			 88  89  90  91  92  93  94  95
+			 96  97  98  99 100 101 102 103
+			104 105 106 107 108 109 110 111
+			112 113 114 115 116 117 118 119
+			120 121 122 123 124 125 126 127
+			128 129 130 131 132 133 134 135
+			136 137 138 139 140 141 142 143
+			144 145 146 147 148 149 150 151
+			152 153 154 155 156 157 158 159
+			160 161 162 163 164 165 166 167
+			168 169 170 171 172 173 174 175
+			176 177 178 179 180 181 182 183
+			184 185 186 187 188 189 190 191
+			192 193 194 195 196 197 198 199
+			200 201 202 203 204 205 206 207
+			208 209 210 211 212 213 214 215
+			216 217 218 219 220 221 222 223
+			224 225 226 227 228 229 230 231
+			232 233 234 235 236 237 238 239
+			240 241 242 243 244 245 246 247
+			248 249 250 251 252 253 254 255
+		>;
+		default-brightness-level = <200>;
+		status = "okay";	/* 此处显式启用背光 */
+	};
+
+	adc_keys: adc-keys {
+		compatible = "adc-keys";
+		io-channels = <&saradc 1>;
+		io-channel-names = "buttons";
+		keyup-threshold-microvolt = <1800000>;
+		poll-interval = <100>;
+	};
+
+	fiq_debugger: fiq-debugger {
+		compatible = "rockchip,fiq-debugger";
+		rockchip,serial-id = <0>;
+		rockchip,wake-irq = <0>;
+		rockchip,irq-mode-enable = <1>;
+		rockchip,baudrate = <1500000>;
+		interrupts = <GIC_SPI 115 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
+	leds: leds {
+		compatible = "gpio-leds";
+		work_led: work-led {
+			gpios = <&gpio1 RK_PA0 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+		};
+	};
+
+	vcc_sys: vcc-sys {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_sys";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+	};
+
+	vcc_3v3: vcc-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_3v3";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		vin-supply = <&vcc_sys>;
+	};
+
+	vcc_1v8: vcc-1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_1v8";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		vin-supply = <&vcc_3v3>;
+	};
+
+	vcc_ddr: vcc-ddr {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_ddr";
+		regulator-always-on;
+		regulator-boot-on;
+		vin-supply = <&vcc_sys>;
+	};
+
+	vdd_0v9: vdd-0v9 {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_0v9";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <900000>;
+		regulator-max-microvolt = <900000>;
+		vin-supply = <&vcc_sys>;
+	};
+
+	vdd_cpu: vdd-cpu {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_cpu";
+		regulator-boot-on;
+		regulator-always-on;
+		regulator-min-microvolt = <500000>;
+		regulator-max-microvolt = <1500000>;
+		vin-supply = <&vdd_cpu>;
+	};
+};
+
+/**********cpu**********/
+&cpu0 {
+	cpu-supply = <&vdd_cpu>;
+	status = "okay";
+};
+
+/**********display**********/
+&cma {
+	size = <0x2000000>;
+};
+
+&display_subsystem {
+	logo-memory-region = <&drm_logo>;
+	status = "okay";
+};
+
+&route_dsi{
+	status = "okay";
+};
+
+&vop {
+	status = "okay";
+};
+
+&rga2 {
+	status = "okay";
+};
+
+&pwm0_4ch_2 {
+	pinctrl-names = "active";
+	pinctrl-0 = <&rm_io15_pwm0_ch2>;
+	status = "okay";
+};
+
+&dsi {
+	status = "okay";
+
+	dsi_panel: panel@0 {
+		status = "okay";
+		/* 差异点：新增属性，用于指定 MIPI 通道速率 */
+		rockchip,lane-rate = <1000>;
+		compatible = "simple-panel-dsi";
+		reg = <0>;
+		bpc = <8>;          /* 每像素 8 位色彩深度 */
+		/* 差异点：电源引用改为 vcc3v3_lcd（需在根节点定义或由其他文件提供） */
+		power-supply = <&vcc3v3_lcd>;   
+   		/* 差异点：显式启用背光 */
+		backlight = <&backlight>;
+		/* 差异点：添加复位 GPIO 控制，GPIO1_C4 用于屏幕硬件复位 */
+		reset-gpios = <&gpio1 RK_PC4 GPIO_ACTIVE_LOW>;
+		/* 差异点：定制时序延迟参数，适配本屏幕的复位与初始化要求 */
+		reset-delay-ms = <30>;
+		enable-delay-ms = <100>;
+		prepare-delay-ms = <20>;
+		unprepare-delay-ms = <20>;
+		disable-delay-ms = <20>;
+		init-delay-ms = <120>;
+
+		dsi,flags = <(MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_BURST | MIPI_DSI_MODE_LPM | MIPI_DSI_MODE_NO_EOT_PACKET )>;
+		dsi,format = <MIPI_DSI_FMT_RGB888>;
+		dsi,lanes  = <2>;	/* 2 条数据通道 */
+
+		/* 差异点：专为 480x854 屏幕编写的初始化命令序列（已压缩为单行） */
+		panel-init-sequence = [05 78 01 01 39 00 06 FF 77 01 00 00 13 15 00 02 EF 08 39 00 06 FF 77 01 00 00 10 39 00 03 C0 E9 03 39 00 03 C1 12 0C 39 00 03 C2 27 0A 15 00 02 CC 10 39 00 11 B0 00 23 2A 0A 0E 03 12 06 06 2A 00 10 0F 2D 34 1F 39 00 11 B1 00 24 2B 0F 12 07 15 0A 0A 2B 08 13 10 2D 33 1F 39 00 06 FF 77 01 00 00 11 15 00 02 B0 5D 15 00 02 B1 74 15 00 02 B2 84 15 00 02 B3 80 15 00 02 B5 45 15 00 02 B7 85 15 00 02 B8 33 15 00 02 C1 78 15 00 02 C2 78 15 64 02 D0 88 39 00 04 E0 00 00 02 39 00 0C E1 06 A0 08 A0 05 A0 07 A0 00 44 44 39 00 0D E2 30 30 44 44 6E A0 00 00 6E A0 00 00 39 00 05 E3 00 00 33 33 39 00 03 E4 44 44 39 00 11 E5 0D 69 0A A0 0F 6B 0A A0 09 65 0A A0 0B 67 0A A0 39 00 05 E6 00 00 33 33 39 00 03 E7 44 44 39 00 11 E8 0C 68 0A A0 0E 6A 0A A0 08 64 0A A0 0A 66 0A A0 39 00 03 E9 36 00 39 00 08 EB 00 01 E4 E4 44 88 40 39 00 11 ED FF 45 67 FA 01 2B CF FF FF FC B2 10 AF 76 54 FF 39 00 07 EF 10 0D 04 08 3F 1F 39 00 06 FF 77 01 00 00 00 15 00 02 36 00 15 00 02 3A 70 05 78 01 11 05 14 01 29];
+
+		/* 退出睡眠和关闭显示的标准命令 */
+		panel-exit-sequence = [05 00 01 28 05 00 01 10];
+
+		display-timings {
+			/* 差异点：仅保留适配 480x854 的时序，其他通用版时序定义全部移除 */
+			native-mode = <&timing0>;
+			timing0: timing0 {
+				clock-frequency = <27000000>;	/* 像素时钟 27MHz */
+				hactive = <480>;		/* 水平有效像素 */
+				vactive = <854>;		/* 垂直有效像素 */
+				hfront-porch = <7>;		/* 水平前沿 */
+				hsync-len = <2>;		/* 水平同步宽度 */
+				hback-porch = <11>;		/* 水平后沿 */
+				vfront-porch = <22>;		/* 垂直前沿 */
+				vsync-len = <2>;		/* 垂直同步宽度 */
+				vback-porch = <12>;		/* 垂直后沿 */
+				hsync-active = <0>;		/* 水平同步信号低有效 */
+				vsync-active = <0>;		/* 垂直同步信号低有效 */
+				de-active = <0>;		/* 数据使能信号低有效 */
+				pixelclk-active = <0>;		/* 像素时钟下降沿采样 */
+			};
+		};
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				panel_in_dsi: endpoint {
+					remote-endpoint = <&dsi_out_panel>;
+				};
+			};
+		};
+	};
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@1 {
+			reg = <1>;
+			dsi_out_panel: endpoint {
+				remote-endpoint = <&panel_in_dsi>;
+			};
+		};
+	};
+};
+
+&dsi_dphy {
+	status = "okay";
+};
+
+&dsi_in_vop {
+	status = "okay";
+};
+
+/**********TP**********/
+&i2c2{
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io1_i2c2_scl &rm_io0_i2c2_sda>;
+
+	/* 差异点：启用 FT3269 触摸屏驱动，适配 3 寸屏幕的触控 IC */
+	ft3269: ft3269@38 {
+		compatible = "edt,edt-ft5x06";   /* 使用 FT5x06 兼容驱动 */
+		reg = <0x38>;
+		poll-interval = <1>;            /* 轮询间隔 1ms */
+		touchscreen-size-x = <480>;
+		touchscreen-size-y = <854>;
+		touchscreen-inverted-x = <1>;   /* 根据屏幕安装方向可能需要反转 X 轴 */
+		status = "okay";
+    };
+
+	/* 通用版中存在的其他触摸屏节点均被注释，避免冲突 */
+	// gt9271: gt9271@5d {
+	// 	status = "okay";
+	// 	compatible = "goodix,gt9271";
+	// 	reg = <0x5d>;
+	// 	pinctrl-names = "default";
+	// };
+
+	// gt911: gt911@14 {
+	// 	status = "okay";
+	// 	compatible = "goodix,gt911";
+	// 	reg = <0x14>;
+	// };
+
+	// ft5406: ft5406@38 {
+	// 	status = "okay";
+	// 	compatible = "edt,edt-ft5506";
+	// 	reg = <0x38>;
+	// 	touchscreen-inverted-x;
+	// 	touchscreen-inverted-y;
+	// 	touchscreen-size-x = <800>;
+	// 	touchscreen-size-y = <480>;
+	// };
+
+	// ws_bl: ws-bl@45 {
+	// 	status = "okay";
+	// 	compatible = "waveshare,dsi-backlight";
+	// 	reg = <0x45>;
+	// 	default-brightness-level = <200>;
+	// 	max-brightness-level = <255>;
+	// 	min-brightness-level = <5>;
+	// };
+};
+
+&pinctrl {
+	rm_io0 {
+		rm_io0_i2c2_sda: rm-io0-i2c2-sda {
+			rockchip,pins = <0 RK_PA0 35 &pcfg_pull_up>;
+		};
+	};
+
+	rm_io1 {
+		rm_io1_i2c2_scl: rm-io1-i2c2-scl {
+			rockchip,pins = <0 RK_PA1 34 &pcfg_pull_up>;
+		};
+	};
+};
+
+/**********adc**********/
+&saradc {
+	vref-supply = <&vcc_1v8>;
+	status = "okay";
+};
+
+&tsadc {
+	pinctrl-names = "gpio", "otpout";
+	pinctrl-0 = <&wdt_tsadc_gpio>;
+	pinctrl-1 = <&rm_io21_wdt_tsadc_shut>;
+	status = "okay";
+};
+
+/**********usb**********/
+&usb20_otg0 {
+	dr_mode = "peripheral";
+	status = "okay";
+};
+
+&usb20_otg1 {
+	dr_mode = "host";
+	status = "okay";
+};
+
+&usb2phy {
+	status = "okay";
+};
+
+&u2phy_otg0 {
+	status = "okay";
+};
+
+&u2phy_otg1 {
+	status = "okay";
+};
+
+/**********pinctrl**********/
+&pinctrl {
+	sdmmc {
+		/omit-if-no-ref/
+		sdmmc_pwren: sdmmc-pwren {
+			rockchip,pins = <1 RK_PB7 RK_FUNC_GPIO &pcfg_pull_down>;
+		};
+
+		sdmmc_det: sdmmc-det {
+			rockchip,pins = <1 RK_PB6 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+
+	tsadc {
+		wdt_tsadc_gpio: wdt-tsadc-gpio {
+			rockchip,pins = <0 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+};
+
