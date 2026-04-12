@@ -17,7 +17,7 @@
 📚 完整教程
 详细的步骤请查阅飞书文档：
 
-👉 点击查看完整教程
+👉 [点击查看完整教程](https://kcnj6wm0kzne.feishu.cn/wiki/TLH8wOTBiigGq0kLuPtcC18Lnyd?from=from_qr_code)
 
 🤝 贡献
 欢迎提交 Issue 或 Pull Request 来改进设备树配置或添加新的屏幕支持。
