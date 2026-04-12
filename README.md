@@ -9,15 +9,15 @@
 
 ## 📁 仓库内容
 
-- `rk3506-luckfox-lyra-ultra.dtsi` —— 设备树文件（适配 Lyra Ultra）
-- `rk3506b-luckfox-lyra-zero-w.dtsi` —— 设备树文件（适配 Lyra Zero W）
+- `rk3506-luckfox-lyra-ultra.dtsi` —— 设备树文件
+- `rk3506b-luckfox-lyra-zero-w.dtsi` —— 设备树文件
 - `PCB/` —— 屏幕转接板 PCB 源文件
 
 ---
 
 ## 📚 完整教程
 
-详细的接线方法、内核配置、驱动调试步骤请查阅飞书文档：
+详细的步骤请查阅飞书文档：
 
 👉 [点击查看完整教程](https://kcnj6wm0kzne.feishu.cn/wiki/TLH8wOTBiigGq0kLuPtcC18Lnyd?from=from_qr_code)
 
