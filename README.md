@@ -11,7 +11,7 @@
 
 - `rk3506-luckfox-lyra-ultra.dtsi` —— 设备树文件
 - `rk3506b-luckfox-lyra-zero-w.dtsi` —— 设备树文件
-- `pcb/` —— 屏幕转接板 PCB 源文件
+- `PCB/` —— 屏幕转接板 PCB 源文件
 
 
 📚 完整教程
