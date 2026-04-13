@@ -25,6 +25,17 @@
 
 ---
 
+## 许可证
+
+本项目采用双许可证模式，请根据使用场景选择遵循。
+
+*   **软件代码** (设备树文件、示例等): 使用 **GNU General Public License v3.0 (GPL-3.0)** 协议。
+*   **硬件设计** (PCB设计图、原理图等): 使用 **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)** 协议。
+
+> 这意味着，你可以自由地使用、修改和分享本项目的软件和硬件设计，但必须遵守上述对应的协议条款。
+
+---
+
 ## 🤝 贡献
 
 欢迎提交 Issue 或 Pull Request 来改进设备树配置或添加新的屏幕支持。
